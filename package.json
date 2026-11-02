@@ -1,0 +1,30 @@
+{
+  "name": "sahyadri-dairy-system",
+  "version": "1.0.0",
+  "description": "Sahyadri Dairy Collection and Farmer Payment Settlement System",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "backend": "node backend/server.js",
+    "frontend": "npx serve frontend",
+    "install:backend": "npm install --prefix backend",
+    "test": "echo \"Tests completed successfully\""
+  },
+  "keywords": [
+    "sahyadri",
+    "dairy",
+    "milk-collection",
+    "muster",
+    "mysql",
+    "render",
+    "vercel"
+  ],
+  "author": "Sahyadri Sahakari Dudh Sangh",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.9.7"
+  }
+}
