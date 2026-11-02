@@ -4,6 +4,7 @@
   "description": "Sahyadri Dairy Collection and Farmer Payment Settlement System",
   "main": "backend/server.js",
   "scripts": {
+    "build": "echo 'Static build ready'",
     "start": "node backend/server.js",
     "backend": "node backend/server.js",
     "frontend": "npx serve frontend",

@@ -1,0 +1,12 @@
+{
+  "name": "sahyadri-dairy-frontend",
+  "version": "1.0.0",
+  "description": "Sahyadri Dairy Mobile-first Web App - Frontend for Vercel",
+  "scripts": {
+    "build": "echo 'Static frontend build ready'",
+    "start": "npx serve ."
+  },
+  "keywords": ["sahyadri", "dairy", "frontend", "vercel"],
+  "author": "Sahyadri Cooperative",
+  "license": "ISC"
+}

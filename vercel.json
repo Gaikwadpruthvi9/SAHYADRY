@@ -1,11 +1,18 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "outputDirectory": "frontend",
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "https://sahyadri-dairy-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/",
+      "destination": "/frontend/index.html"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/frontend/$1"
     }
   ],
   "headers": [
@@ -19,4 +26,3 @@
     }
   ]
 }
-
