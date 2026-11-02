@@ -648,3 +648,183 @@ body {
   from { transform: translateY(-10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* =========================================================
+   ADD FARMER CTA & WHATSAPP MODAL EXTENSIONS
+   ========================================================= */
+.btn-add-farmer-cta {
+  background: var(--primary-green);
+  color: #ffffff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(19, 78, 58, 0.2);
+}
+.btn-add-farmer-cta:hover {
+  background: var(--primary-green-dark);
+  transform: translateY(-1px);
+}
+
+.whatsapp-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-box {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+  animation: modalScale 0.25s ease-out;
+  position: relative;
+}
+@keyframes modalScale {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 10px;
+}
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.btn-whatsapp {
+  background: #25D366;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+.btn-whatsapp:hover {
+  background: #1eb956;
+  transform: translateY(-1px);
+}
+
+.btn-secondary-app {
+  background: #f1f5f9;
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.btn-secondary-app:hover {
+  background: #e2e8f0;
+}
+
+/* Authentic Thermal Dairy Slip */
+.thermal-receipt {
+  background: #fffdf5;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  font-family: 'Courier New', Courier, monospace;
+  color: #1e293b;
+  margin-bottom: 16px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+}
+.receipt-header {
+  text-align: center;
+  border-bottom: 1px dashed #94a3b8;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.receipt-title {
+  font-weight: bold;
+  font-size: 1.05rem;
+  color: var(--primary-green);
+  text-transform: uppercase;
+}
+.receipt-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+.receipt-total-row {
+  border-top: 1.5px dashed #475569;
+  border-bottom: 1.5px dashed #475569;
+  padding: 6px 0;
+  margin: 8px 0;
+  font-weight: bold;
+  font-size: 1rem;
+  color: #0f172a;
+}

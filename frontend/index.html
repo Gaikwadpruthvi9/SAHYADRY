@@ -164,7 +164,7 @@
             </div>
 
             <!-- Live Calculation Preview -->
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:var(--radius-sm); padding:12px; margin-bottom:14px;">
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:var(--radius-sm); padding:12px; margin-bottom:12px;">
               <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
                 <span style="color:var(--text-muted);">Rate per Litre:</span>
                 <strong style="color:var(--primary-green); font-size:1rem;" id="calcRate">₹35.45 / L</strong>
@@ -175,7 +175,21 @@
               </div>
             </div>
 
-            <button type="submit" class="btn-app-primary">✓ Save Collection Entry</button>
+            <!-- WhatsApp Notification Card -->
+            <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:0.83rem; color:#14532d;">
+                  <input type="checkbox" id="autoWhatsappCheck" checked style="width:16px; height:16px; accent-color:#16a34a;">
+                  <span>📱 Auto-send WhatsApp Receipt to Farmer</span>
+                </label>
+                <span style="background:#16a34a; color:#fff; font-size:0.65rem; font-weight:800; padding:2px 7px; border-radius:12px; text-transform:uppercase;">Active</span>
+              </div>
+              <div id="selectedFarmerWhatsapp" style="font-size:0.75rem; color:#15803d; margin-top:5px; padding-left:24px;">
+                WhatsApp: Choose a farmer above to preview contact
+              </div>
+            </div>
+
+            <button type="submit" class="btn-app-primary" id="btnSaveCollection">✓ Save & Send WhatsApp Receipt</button>
           </form>
         </div>
       </section>
@@ -184,8 +198,18 @@
            PAGE 3: FARMERS (Directory / Profile)
            ========================================================= -->
       <section id="view-farmers" class="page-view">
-        <div id="farmerSearchCard" class="form-card" style="padding:12px 14px; margin-bottom:12px;">
-          <input type="text" id="farmerSearchBox" class="input-app" placeholder="🔍 Search farmer by name, code or phone..." oninput="filterFarmerList()">
+        <!-- Top bar with count & Add Farmer CTA -->
+        <div id="farmerActionsBar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:0 2px;">
+          <h3 style="font-size:0.95rem; font-weight:800; color:var(--text-primary); margin:0;">
+            🧑‍🌾 Registered Farmers (<span id="farmersCountBadge">15</span>)
+          </h3>
+          <button type="button" class="btn-add-farmer-cta" onclick="openAddFarmerModal()">
+            ➕ Add New Farmer
+          </button>
+        </div>
+
+        <div id="farmerSearchCard" class="form-card" style="padding:10px 12px; margin-bottom:12px;">
+          <input type="text" id="farmerSearchBox" class="input-app" placeholder="🔍 Search farmer by name, code or WhatsApp phone..." oninput="filterFarmerList()">
         </div>
 
         <div class="entries-list" id="farmersList">
@@ -278,6 +302,169 @@
         <span>Muster</span>
       </button>
     </nav>
+
+    <!-- =========================================================
+         MODAL 1: REGISTER NEW FARMER (WITH WHATSAPP NUMBER)
+         ========================================================= -->
+    <div id="modalAddFarmer" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>🧑‍🌾</span>
+            <span>Register New Farmer</span>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="closeAddFarmerModal()">✕</button>
+        </div>
+
+        <form id="formAddFarmer" onsubmit="handleAddNewFarmerSubmit(event)">
+          <div class="form-group-app">
+            <label for="farmerFullName">Full Name *</label>
+            <input type="text" id="farmerFullName" class="input-app" placeholder="e.g. Ganesh Dattatray Shinde" required>
+          </div>
+
+          <div class="form-group-app">
+            <label for="farmerWhatsapp" style="color:#15803d;">📱 WhatsApp Number *</label>
+            <input type="tel" id="farmerWhatsapp" class="input-app" placeholder="e.g. 98220 12345 or +91..." required>
+            <span style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:3px;">
+              Milk collection slips will be automatically sent to this WhatsApp.
+            </span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group-app">
+              <label for="farmerVillage">Village *</label>
+              <input type="text" id="farmerVillage" class="input-app" placeholder="e.g. Sangamner Khurd" value="Sangamner Khurd" required>
+            </div>
+            <div class="form-group-app">
+              <label for="farmerCentre">Collection Centre</label>
+              <select id="farmerCentre" class="input-app">
+                <option value="1">CC-01 (Sangamner)</option>
+                <option value="2">CC-02 (Chandanapuri)</option>
+                <option value="3">CC-03 (Ghulewadi)</option>
+                <option value="4" selected>CC-04 (Loni Unit)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group-app">
+              <label for="farmerBank">Bank Name</label>
+              <input type="text" id="farmerBank" class="input-app" placeholder="e.g. State Bank of India" value="State Bank of India">
+            </div>
+            <div class="form-group-app">
+              <label for="farmerAccount">Account No.</label>
+              <input type="text" id="farmerAccount" class="input-app" placeholder="30981245999" value="30981245999">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group-app">
+              <label for="farmerIfsc">IFSC Code</label>
+              <input type="text" id="farmerIfsc" class="input-app" placeholder="SBIN0000473" value="SBIN0000473">
+            </div>
+            <div class="form-group-app">
+              <label for="farmerLoan">Advance Loan (₹)</label>
+              <input type="number" step="100" id="farmerLoan" class="input-app" placeholder="0.00" value="0.00">
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <button type="submit" class="btn-app-primary" style="flex:2;">💾 Register Farmer</button>
+            <button type="button" class="btn-secondary-app" style="flex:1;" onclick="closeAddFarmerModal()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         MODAL 2: RECEIPT SLIP & WHATSAPP CONFIRMATION
+         ========================================================= -->
+    <div id="modalReceiptSlip" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>🧾</span>
+            <span>Milk Collection Slip</span>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="closeReceiptModal()">✕</button>
+        </div>
+
+        <!-- Styled Printable Slip -->
+        <div class="thermal-receipt" id="printableSlipArea">
+          <div class="receipt-header">
+            <div class="receipt-title">सह्याद्री सहकारी दूध संघ</div>
+            <div class="receipt-sub">SAHYADRI COOPERATIVE DAIRY · CC-04</div>
+            <div class="receipt-sub" id="slipDateTime">02-Nov-2026 · 14:30</div>
+          </div>
+
+          <div class="receipt-row">
+            <span>पावती / Slip No:</span>
+            <strong id="slipNumber">#COL-4912</strong>
+          </div>
+          <div class="receipt-row">
+            <span>शेतकरी / Farmer:</span>
+            <strong id="slipFarmerName">Ramesh Gaikwad</strong>
+          </div>
+          <div class="receipt-row">
+            <span>कोड / Code:</span>
+            <span id="slipFarmerCode">FRM-1001</span>
+          </div>
+          <div class="receipt-row">
+            <span>सत्र / Session:</span>
+            <span id="slipSession">सकाळ / MORNING</span>
+          </div>
+          <div class="receipt-row">
+            <span>प्रकार / Milk:</span>
+            <span id="slipMilkType">गाय / COW</span>
+          </div>
+
+          <div style="border-top:1px dashed #cbd5e1; margin:8px 0;"></div>
+
+          <div class="receipt-row">
+            <span>वजन / Quantity:</span>
+            <strong id="slipQty">15.00 L</strong>
+          </div>
+          <div class="receipt-row">
+            <span>फॅट / Fat %:</span>
+            <strong id="slipFat">4.2%</strong>
+          </div>
+          <div class="receipt-row">
+            <span>एस.एन.एफ / SNF %:</span>
+            <strong id="slipSnf">8.8%</strong>
+          </div>
+          <div class="receipt-row">
+            <span>दर / Rate:</span>
+            <span id="slipRate">₹41.20 / L</span>
+          </div>
+
+          <div class="receipt-total-row receipt-row">
+            <span>एकूण रक्कम / TOTAL:</span>
+            <span id="slipTotal" style="color:var(--primary-green);">₹618.00</span>
+          </div>
+
+          <div style="text-align:center; font-size:0.72rem; color:#64748b; margin-top:8px;">
+            धन्यवाद! आपल्या सहकार्याबद्दल आभार.
+          </div>
+        </div>
+
+        <!-- WhatsApp Dispatch Action -->
+        <div style="margin-bottom:12px;">
+          <div id="whatsappSentStatusBadge" style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:#15803d; font-weight:700; margin-bottom:8px;">
+            <span>✅</span>
+            <span id="whatsappStatusText">WhatsApp slip dispatched automatically!</span>
+          </div>
+          <a id="btnWhatsappDirectLink" href="#" target="_blank" class="btn-whatsapp">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+            <span>📱 Resend WhatsApp Slip</span>
+          </a>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-secondary-app" style="flex:1;" onclick="printReceiptSlip()">🖨️ Print Slip</button>
+          <button type="button" class="btn-app-primary" style="flex:1;" onclick="closeReceiptModal()">✓ Done</button>
+        </div>
+      </div>
+    </div>
 
   </div>
 

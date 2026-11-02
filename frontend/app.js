@@ -400,6 +400,16 @@ function setMilkType(typeId) {
 }
 
 function updateFarmerInfo() {
+    const farmerId = parseInt(document.getElementById('collectFarmerSelect').value);
+    const label = document.getElementById('selectedFarmerWhatsapp');
+    if (!farmerId) {
+        if (label) label.innerText = 'WhatsApp: Choose a farmer above to preview contact';
+    } else {
+        const f = globalFarmers.find(x => x.farmer_id === farmerId);
+        if (f && label) {
+            label.innerHTML = `<strong>📱 WhatsApp:</strong> ${f.phone} (<em>${f.full_name}</em>) · Slip will be sent automatically`;
+        }
+    }
     calculateRatePreview();
 }
 
@@ -430,6 +440,88 @@ async function calculateRatePreview() {
     }, 100);
 }
 
+// ---------------------------------------------------------------------
+// 4B. WHATSAPP MILK SLIP GENERATION & DISPATCH
+// ---------------------------------------------------------------------
+function formatWhatsAppReceiptText(data) {
+    const milkName = data.milkType === 1 ? 'गाय / COW' : 'म्हैस / BUFFALO';
+    const sessName = data.session === 'MORNING' ? 'सकाळ / MORNING' : 'संध्याकाळ / EVENING';
+
+    return `🥛 *सह्याद्री सहकारी दूध उत्पादक संस्था*
+*SAHYADRI COOPERATIVE DAIRY*
+----------------------------------------
+🧾 *पावती क्र. / Slip:* ${data.slipNumber}
+🧑‍🌾 *शेतकरी / Farmer:* ${data.farmerName} (${data.farmerCode})
+📅 *दिनांक / Date:* ${data.date} (${sessName})
+🥛 *प्रकार / Milk:* ${milkName}
+----------------------------------------
+⚖️ *वजन / Qty:* ${parseFloat(data.qty).toFixed(2)} Litres
+🧈 *फॅट / Fat:* ${parseFloat(data.fat).toFixed(1)}%
+🧪 *एस.एन.एफ / SNF:* ${parseFloat(data.snf).toFixed(1)}%
+💵 *दर / Rate:* ₹${parseFloat(data.rate).toFixed(2)} / Litre
+----------------------------------------
+💰 *एकूण रक्कम / Net Amount: ₹${parseFloat(data.total).toFixed(2)}*
+----------------------------------------
+📍 *केंद्र / Centre:* ${data.centreName || 'Collection Center 04'}
+🙏 धन्यवाद! सह्याद्री दूध संघात आपले स्वागत आहे.`;
+}
+
+function openReceiptModal(slipData, autoSend = true) {
+    const modal = document.getElementById('modalReceiptSlip');
+    if (!modal) return;
+
+    document.getElementById('slipDateTime').innerText = `${slipData.date} · ${slipData.time}`;
+    document.getElementById('slipNumber').innerText = slipData.slipNumber;
+    document.getElementById('slipFarmerName').innerText = slipData.farmerName;
+    document.getElementById('slipFarmerCode').innerText = slipData.farmerCode;
+    document.getElementById('slipSession').innerText = slipData.session === 'MORNING' ? '☀️ सकाळ / MORNING' : '🌙 संध्याकाळ / EVENING';
+    document.getElementById('slipMilkType').innerText = slipData.milkType === 1 ? '🐄 गाय / COW' : '🐃 म्हैस / BUFFALO';
+    document.getElementById('slipQty').innerText = `${parseFloat(slipData.qty).toFixed(2)} L`;
+    document.getElementById('slipFat').innerText = `${parseFloat(slipData.fat).toFixed(1)}%`;
+    document.getElementById('slipSnf').innerText = `${parseFloat(slipData.snf).toFixed(1)}%`;
+    document.getElementById('slipRate').innerText = `₹${parseFloat(slipData.rate).toFixed(2)} / L`;
+    document.getElementById('slipTotal').innerText = `₹${parseFloat(slipData.total).toFixed(2)}`;
+
+    const msg = formatWhatsAppReceiptText(slipData);
+
+    let cleanPhone = (slipData.phone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+        cleanPhone = '91' + cleanPhone;
+    }
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+
+    const waBtn = document.getElementById('btnWhatsappDirectLink');
+    if (waBtn) {
+        waBtn.href = whatsappUrl;
+    }
+
+    const statusText = document.getElementById('whatsappStatusText');
+    if (statusText) {
+        statusText.innerText = `WhatsApp receipt ready for +${cleanPhone} (${slipData.farmerName})`;
+    }
+
+    modal.classList.add('active');
+
+    // Automatically trigger WhatsApp in a new tab if autoSend enabled
+    if (autoSend && cleanPhone) {
+        try {
+            window.open(whatsappUrl, '_blank');
+        } catch (e) {
+            console.log('Browser blocked popup, manual button available.');
+        }
+    }
+}
+
+function closeReceiptModal() {
+    const modal = document.getElementById('modalReceiptSlip');
+    if (modal) modal.classList.remove('active');
+}
+
+function printReceiptSlip() {
+    window.print();
+}
+
 async function handleCollectSubmit(e) {
     e.preventDefault();
     const farmerId = parseInt(document.getElementById('collectFarmerSelect').value);
@@ -446,34 +538,30 @@ async function handleCollectSubmit(e) {
     const estimatedRate = activeMilkType === 1 ? (37.5 + (fat - 3.5) * 3.0 + (snf - 8.5) * 2.0) : (56.0 + (fat - 6.5) * 4.5 + (snf - 9.0) * 2.5);
     const netAmount = qty * estimatedRate;
 
-    try {
-        const res = await fetch(`${API_BASE}/api/collections`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                farmer_id: farmerId,
-                centre_id: 1,
-                collection_date: new Date().toISOString().split('T')[0],
-                session: activeSession,
-                milk_type_id: activeMilkType,
-                quantity_litres: qty,
-                fat_percentage: fat,
-                snf_percentage: snf,
-                user_id: 3
-            })
-        });
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeFormatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const slipNumber = `#COL-${Math.floor(1000 + Math.random() * 9000)}`;
 
-        const data = await res.json();
-        if (data && data.success) {
-            showToast(`✅ Collection recorded: ${qty} L @ ₹${data.data.net_payable_amount}`);
-            document.getElementById('collectQty').value = '';
-            loadHomeData();
-            navTo('home');
-            return;
-        }
-    } catch (err) {
-        // Backend API offline or database connecting: record locally into sample state
-    }
+    const slipData = {
+        slipNumber,
+        farmerId: selectedFarmer.farmer_id,
+        farmerName: selectedFarmer.full_name,
+        farmerCode: selectedFarmer.farmer_code,
+        phone: selectedFarmer.phone,
+        session: activeSession,
+        milkType: activeMilkType,
+        qty,
+        fat,
+        snf,
+        rate: estimatedRate,
+        total: netAmount,
+        centreName: selectedFarmer.centre_name || 'Collection Center 04',
+        date: dateFormatted,
+        time: timeFormatted
+    };
+
+    const autoSendWhatsapp = document.getElementById('autoWhatsappCheck') ? document.getElementById('autoWhatsappCheck').checked : true;
 
     // Add entry to client collections list
     SAMPLE_COLLECTIONS.unshift({
@@ -491,26 +579,164 @@ async function handleCollectSubmit(e) {
         payment_status: 'ACCEPTED'
     });
 
-    showToast(`🥛 Milk collection recorded: ${qty} L for ${selectedFarmer.full_name}`);
+    // Attempt backend save if online
+    try {
+        await fetch(`${API_BASE}/api/collections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                farmer_id: farmerId,
+                centre_id: selectedFarmer.centre_id || 1,
+                collection_date: now.toISOString().split('T')[0],
+                session: activeSession,
+                milk_type_id: activeMilkType,
+                quantity_litres: qty,
+                fat_percentage: fat,
+                snf_percentage: snf,
+                user_id: 3
+            })
+        });
+    } catch (err) {
+        // Sample fallback active
+    }
+
     document.getElementById('collectQty').value = '';
     loadHomeData();
-    navTo('home');
+
+    // Open WhatsApp Receipt Slip modal & auto-dispatch
+    openReceiptModal(slipData, autoSendWhatsapp);
+    showToast(`🥛 Collection saved! WhatsApp slip dispatched to ${selectedFarmer.full_name}`);
 }
 
 // ---------------------------------------------------------------------
-// 5. FARMERS PAGE (Tailored to active user role)
+// 5. FARMERS PAGE & ADD NEW FARMER MODAL
 // ---------------------------------------------------------------------
+function openAddFarmerModal() {
+    const modal = document.getElementById('modalAddFarmer');
+    if (modal) {
+        modal.classList.add('active');
+        const input = document.getElementById('farmerFullName');
+        if (input) input.focus();
+    }
+}
+
+function closeAddFarmerModal() {
+    const modal = document.getElementById('modalAddFarmer');
+    if (modal) modal.classList.remove('active');
+}
+
+async function handleAddNewFarmerSubmit(e) {
+    e.preventDefault();
+    const fullName = document.getElementById('farmerFullName').value.trim();
+    const rawPhone = document.getElementById('farmerWhatsapp').value.trim();
+    const villageName = document.getElementById('farmerVillage').value.trim() || 'Sangamner Khurd';
+    const centreId = parseInt(document.getElementById('farmerCentre').value) || 4;
+    const bankName = document.getElementById('farmerBank').value.trim() || 'State Bank of India';
+    const accountNo = document.getElementById('farmerAccount').value.trim() || '30981245999';
+    const ifsc = document.getElementById('farmerIfsc').value.trim() || 'SBIN0000473';
+    const loan = parseFloat(document.getElementById('farmerLoan').value) || 0.00;
+
+    if (!fullName) {
+        alert('Please enter the farmer full name.');
+        return;
+    }
+
+    const digitsOnly = rawPhone.replace(/[^0-9]/g, '');
+    if (digitsOnly.length < 10) {
+        alert('Please enter a valid 10-digit WhatsApp number.');
+        return;
+    }
+
+    const last10 = digitsOnly.slice(-10);
+    const formattedPhone = `+91 ${last10.slice(0, 5)} ${last10.slice(5)}`;
+
+    const centreNames = {
+        1: 'Sangamner Central BMC Unit',
+        2: 'Chandanapuri Collection Centre',
+        3: 'Ghulewadi Automated Dairy Point',
+        4: 'Loni Bulk Milk Cooling Centre'
+    };
+
+    const nextCodeNum = 1001 + globalFarmers.length;
+    const farmerCode = `FRM-${nextCodeNum}`;
+
+    const newFarmer = {
+        farmer_id: Date.now(),
+        farmer_code: farmerCode,
+        first_name: fullName.split(' ')[0],
+        last_name: fullName.split(' ').slice(1).join(' ') || '',
+        full_name: fullName,
+        phone: formattedPhone,
+        raw_whatsapp: `91${last10}`,
+        village_name: villageName,
+        assigned_centre_id: centreId,
+        centre_id: centreId,
+        centre_name: centreNames[centreId] || 'Collection Center 04',
+        bank_name: bankName,
+        bank_account_number: accountNo,
+        ifsc_code: ifsc,
+        outstanding_loan: loan.toFixed(2),
+        status: 'ACTIVE'
+    };
+
+    // Prepend to list so newly added farmer appears first
+    globalFarmers.unshift(newFarmer);
+
+    // Update select dropdown in Collect page and auto-select new farmer
+    populateFarmerSelect();
+    const sel = document.getElementById('collectFarmerSelect');
+    if (sel) {
+        sel.value = newFarmer.farmer_id;
+        updateFarmerInfo();
+    }
+
+    // Refresh farmers list and count
+    const countBadge = document.getElementById('farmersCountBadge');
+    if (countBadge) countBadge.innerText = globalFarmers.length;
+    filterFarmerList();
+
+    // Persist to backend if available
+    try {
+        await fetch(`${API_BASE}/api/farmers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                farmer_code: newFarmer.farmer_code,
+                first_name: newFarmer.first_name,
+                last_name: newFarmer.last_name,
+                village_id: centreId,
+                assigned_centre_id: centreId,
+                phone: formattedPhone,
+                bank_name: bankName,
+                bank_account_number: accountNo,
+                ifsc_code: ifsc
+            })
+        });
+    } catch (err) {
+        // Sample fallback active
+    }
+
+    closeAddFarmerModal();
+    document.getElementById('formAddFarmer').reset();
+    showToast(`🧑‍🌾 Farmer ${fullName} registered with WhatsApp!`);
+}
+
 function renderFarmersPage() {
     const list = document.getElementById('farmersList');
     const searchCard = document.getElementById('farmerSearchCard');
+    const actionsBar = document.getElementById('farmerActionsBar');
     if (!list) return;
 
     if (activeRole === 'FARMER') {
-        // Strict Privacy: Hide global search bar from individual farmers
+        // Strict Privacy: Hide global search bar and add CTA from individual farmers
         if (searchCard) searchCard.style.display = 'none';
+        if (actionsBar) actionsBar.style.display = 'none';
 
         const f = globalFarmers.find(x => x.farmer_id === loggedInFarmerId) || globalFarmers[0];
         if (!f) return;
+
+        let cleanPhone = (f.phone || '').replace(/[^0-9]/g, '');
+        if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
 
         list.innerHTML = `
             <div class="form-card" style="box-shadow:var(--shadow-card);">
@@ -522,11 +748,14 @@ function renderFarmersPage() {
                     </div>
                 </div>
                 <div style="font-size:0.83rem; color:var(--text-muted); line-height:1.8; border-top:1px solid var(--border-light); padding-top:10px;">
-                    <div>📱 Registered Mobile: <strong style="color:var(--text-primary);">${f.phone}</strong></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>📱 WhatsApp Contact: <strong style="color:var(--text-primary);">${f.phone}</strong></span>
+                        <a href="https://wa.me/${cleanPhone}" target="_blank" class="whatsapp-badge-pill" style="text-decoration:none;">💬 Chat</a>
+                    </div>
                     <div>🏦 Bank Name: <strong style="color:var(--text-primary);">${f.bank_name}</strong></div>
                     <div>💳 Account Number: <strong style="color:var(--text-primary); font-family:monospace;">${f.bank_account_number}</strong></div>
                     <div>🏢 IFSC Code: <code style="background:#f1f5f9; padding:1px 6px; border-radius:4px;">${f.ifsc_code}</code></div>
-                    <div>📍 Assigned Center: <strong style="color:var(--text-primary);">Collection Center 01 (Sangamner)</strong></div>
+                    <div>📍 Assigned Center: <strong style="color:var(--text-primary);">${f.centre_name || 'Collection Center 01'}</strong></div>
                     <div>🌾 Active Cattle Feed / Advance Loan: <strong style="color:var(--accent-rose); font-size:0.95rem;">₹${f.outstanding_loan || '0.00'}</strong></div>
                 </div>
             </div>
@@ -534,8 +763,9 @@ function renderFarmersPage() {
         return;
     }
 
-    // Main Manager & Center Manager views: Show full directory search
+    // Main Manager & Center Manager views: Show full directory search & Add CTA
     if (searchCard) searchCard.style.display = 'block';
+    if (actionsBar) actionsBar.style.display = 'flex';
     filterFarmerList();
 }
 
@@ -551,33 +781,43 @@ function filterFarmerList() {
         (f.village_name && f.village_name.toLowerCase().includes(term))
     );
 
+    const countBadge = document.getElementById('farmersCountBadge');
+    if (countBadge) countBadge.innerText = filtered.length;
+
     if (filtered.length === 0) {
         list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.85rem;">No farmers match your search.</div>`;
         return;
     }
 
-    list.innerHTML = filtered.map(f => `
-        <div class="entry-card">
-            <div class="entry-left">
-                <div class="farmer-avatar">${f.full_name.substring(0, 2).toUpperCase()}</div>
-                <div class="farmer-info-col">
-                    <h4>${f.full_name}</h4>
-                    <div class="farmer-meta-row">
-                        <span>${f.farmer_code}</span>
-                        <span>•</span>
-                        <span>${f.village_name}</span>
-                        <span>•</span>
-                        <span>${f.phone}</span>
+    list.innerHTML = filtered.map(f => {
+        let cleanPhone = (f.phone || '').replace(/[^0-9]/g, '');
+        if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+
+        return `
+            <div class="entry-card">
+                <div class="entry-left">
+                    <div class="farmer-avatar">${f.full_name.substring(0, 2).toUpperCase()}</div>
+                    <div class="farmer-info-col">
+                        <h4>${f.full_name}</h4>
+                        <div class="farmer-meta-row">
+                            <span>${f.farmer_code}</span>
+                            <span>•</span>
+                            <span>${f.village_name}</span>
+                            <span>•</span>
+                            <a href="https://wa.me/${cleanPhone}" target="_blank" class="whatsapp-badge-pill" style="text-decoration:none;" title="Send WhatsApp">
+                                📱 ${f.phone}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="entry-right">
+                    <div class="entry-amount" style="font-size:0.82rem; color:var(--text-muted);">
+                        ${parseFloat(f.outstanding_loan) > 0 ? `<span style="color:var(--accent-rose); font-weight:700;">Loan: ₹${f.outstanding_loan}</span>` : '<span style="color:var(--primary-green); font-weight:600;">No Dues</span>'}
                     </div>
                 </div>
             </div>
-            <div class="entry-right">
-                <div class="entry-amount" style="font-size:0.82rem; color:var(--text-muted);">
-                    ${parseFloat(f.outstanding_loan) > 0 ? `<span style="color:var(--accent-rose); font-weight:700;">Loan: ₹${f.outstanding_loan}</span>` : '<span style="color:var(--primary-green); font-weight:600;">No Dues</span>'}
-                </div>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // ---------------------------------------------------------------------
